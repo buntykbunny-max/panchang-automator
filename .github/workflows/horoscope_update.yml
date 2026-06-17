@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '30 22 * * *' 
   workflow_dispatch:
- 
+
 jobs:
   update-horoscope:
     runs-on: ubuntu-latest
@@ -30,6 +30,7 @@ jobs:
             const { initializeApp, cert } = require('firebase-admin/app');
             const { getFirestore } = require('firebase-admin/firestore');
             const axios = require('axios');
+            const translate = require('google-translate-api-x'); // 🌟 ट्रांसलेशन टूल
             
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
             
@@ -42,31 +43,42 @@ jobs:
             async function run() {
               try {
                 const todayId = new Date().toISOString().split('T')[0];
-                const sign = 'leo'; // 🌟 सिर्फ़ एक राशि 
+                const zodiacSigns = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
+                let allData = {};
                 
-                console.log('सिर्फ़ Weekly डेटा (Leo) के लिए टेस्टिंग शुरू...');
+                console.log('राशिफल फेच और ट्रांसलेट करना शुरू कर रहे हैं...');
                 
-                const weeklyUrl = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/weekly/?zodiacSign=' + sign;
-                
-                const response = await axios.get(weeklyUrl, {
-                  headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
-                });
-                
-                console.log('✅ API से डेटा आ गया! यह रहा डेटा:', JSON.stringify(response.data).substring(0, 100) + '...');
-                
-                // 🌟 Firebase में सेव करें
-                let weeklyData = {};
-                weeklyData[sign] = response.data;
-                
-                await db.collection('weekly_rashifal').doc(todayId).set(weeklyData, { merge: true });
-                
-                console.log('🎉 सक्सेस! Weekly डेटा Firebase में सेव हो गया!');
-                
-              } catch (err) {
-                console.error('❌ Error आ गया:', err.message);
-                if (err.response) {
-                  console.error('API Error Details:', err.response.data);
+                for (let sign of zodiacSigns) {
+                  console.log('Fetching & Translating for: ' + sign);
+                  
+                  const url = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/today/?zodiacSign=' + sign;
+                  
+                  const response = await axios.get(url, {
+                    headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
+                  });
+                  
+                  // 🌟 API से मिला इंग्लिश डेटा
+                  const englishData = response.data;
+                  
+                  // 🚨 ध्यान दें: यहाँ 'prediction' या 'description' वो शब्द होना चाहिए जिसमें असली राशिफल लिखा है। 
+                  // मान लेते हैं कि API में वो 'prediction' के नाम से आता है:
+                  let textToTranslate = englishData.prediction || JSON.stringify(englishData); 
+                  
+                  // 🌟 हिंदी में ट्रांसलेट करें
+                  const translatedResult = await translate(textToTranslate, { to: 'hi' });
+                  
+                  // ट्रांसलेटेड डेटा को लिस्ट में जोड़ें
+                  allData[sign] = Object.assign({}, englishData, {
+                    hindi_prediction: translatedResult.text
+                  });
+                  
+                  await new Promise(r => setTimeout(r, 1000)); // ट्रांसलेशन API को रिलैक्स करने का टाइम
                 }
+                
+                await db.collection('daily_rashifal').doc(todayId).set(allData, { merge: true });
+                console.log('✅ सभी 12 राशियों का राशिफल हिंदी में ट्रांसलेट होकर Firebase में सेव हो गया!');
+              } catch (err) {
+                console.error('❌ Error:', err.message);
                 process.exit(1);
               }
             }
