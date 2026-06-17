@@ -26,7 +26,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }} 
         run: |
-           node -e "
+          node -e "
             const { initializeApp, cert } = require('firebase-admin/app');
             const { getFirestore } = require('firebase-admin/firestore');
             const axios = require('axios');
@@ -42,40 +42,25 @@ jobs:
             async function run() {
               try {
                 const todayId = new Date().toISOString().split('T')[0];
-                const zodiacSigns = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
+                const sign = 'leo'; // 🌟 सिर्फ़ एक राशि 
                 
-                let dailyData = {};
+                console.log('सिर्फ़ Weekly डेटा (Leo) के लिए टेस्टिंग शुरू...');
+                
+                const weeklyUrl = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/weekly/?zodiacSign=' + sign;
+                
+                const response = await axios.get(weeklyUrl, {
+                  headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
+                });
+                
+                console.log('✅ API से डेटा आ गया! यह रहा डेटा:', JSON.stringify(response.data).substring(0, 100) + '...');
+                
+                // 🌟 Firebase में सेव करें
                 let weeklyData = {};
+                weeklyData[sign] = response.data;
                 
-                console.log('Daily और Weekly फेचिंग शुरू...');
-                
-                for (let sign of zodiacSigns) {
-                  console.log('Fetching: ' + sign);
-                  
-                  const dailyUrl = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/?zodiacSign=' + sign;
-                  const weeklyUrl = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/weekly/?zodiacSign=' + sign;
-                  const headers = { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY };
-                  
-                  // Daily
-                  const dailyResponse = await axios.get(dailyUrl, { headers });
-                  dailyData[sign] = dailyResponse.data;
-                  await new Promise(r => setTimeout(r, 1000)); // 1 सेकंड का ब्रेक
-                  
-                  // Weekly
-                  const weeklyResponse = await axios.get(weeklyUrl, { headers });
-                  weeklyData[sign] = weeklyResponse.data;
-                  await new Promise(r => setTimeout(r, 1000)); // 1 सेकंड का ब्रेक
-                }
-                
-                console.log('✅ सारा डेटा आ गया! अब Firebase में सेव कर रहे हैं...');
-                
-                // Daily Save
-                await db.collection('daily_rashifal').doc(todayId).set(dailyData, { merge: true });
-                console.log('✅ Daily सेव हो गया!');
-                
-                // Weekly Save
                 await db.collection('weekly_rashifal').doc(todayId).set(weeklyData, { merge: true });
-                console.log('✅ Weekly सेव हो गया!');
+                
+                console.log('🎉 सक्सेस! Weekly डेटा Firebase में सेव हो गया!');
                 
               } catch (err) {
                 console.error('❌ Error आ गया:', err.message);
