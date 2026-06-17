@@ -2,7 +2,7 @@ name: Daily Panchang Auto-Update
 
 on:
   schedule:
-    # 🌟 रोज़ सुबह 4:00 बजे (IST के हिसाब से) चलेगा
+    # 🌟 रोज़ सुबह 4:00 बजे (IST के हिसाब से) चलेगा
     - cron: '30 22 * * *' 
   workflow_dispatch:
 
@@ -24,23 +24,26 @@ jobs:
       - name: Run Update Script
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          RAPIDAPI_KEY: '74fc4b54a4msh8061068cefa2fe6p125daajsn4e3a57929e4d'
+          # 🚨 API Key ko hardcode na karein, ise bhi Secrets se lein
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }} 
         run: |
          node -e "
-            const admin = require('firebase-admin');
+            // 🌟 Naya Firebase v12 Modular Syntax
+            const { initializeApp, cert, getApps } = require('firebase-admin/app');
+            const { getFirestore } = require('firebase-admin/firestore');
             const axios = require('axios');
             
             // 🌟 सुरक्षित तरीके से JSON को लोड करें
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
             
-            // 🌟 इनिशियलाइज़ेशन को सही करें
-            if (!admin.apps.length) {
-              admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount)
+            // 🌟 इनिशियलाइज़ेशन को सही करें (getApps use karke)
+            if (!getApps().length) {
+              initializeApp({
+                credential: cert(serviceAccount)
               });
             }
             
-            const db = admin.firestore();
+            const db = getFirestore();
             
             async function run() {
               try {
