@@ -26,26 +26,38 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           RAPIDAPI_KEY: '74fc4b54a4msh8061068cefa2fe6p125daajsn4e3a57929e4d'
         run: |
-          node -e "
+         node -e "
             const admin = require('firebase-admin');
             const axios = require('axios');
             
-            // Firebase Initialize
+            // 🌟 सुरक्षित तरीके से JSON को लोड करें
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-            admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+            
+            // 🌟 इनिशियलाइज़ेशन को सही करें
+            if (!admin.apps.length) {
+              admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount)
+              });
+            }
+            
+            const db = admin.firestore();
             
             async function run() {
-              const todayId = new Date().toISOString().split('T')[0];
-              // API से डेटा फेच करें
-              const response = await axios.get('https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/daily?zodiacSign=aries', {
-                headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
-              });
-              
-              // Firebase में सेव करें
-              await admin.firestore().collection('daily_rashifal').doc(todayId).set({
-                aries: response.data
-              }, { merge: true });
-              console.log('✅ Updated for today!');
+              try {
+                const todayId = new Date().toISOString().split('T')[0];
+                const response = await axios.get('https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/daily?zodiacSign=aries', {
+                  headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
+                });
+                
+                await db.collection('daily_rashifal').doc(todayId).set({
+                  aries: response.data
+                }, { merge: true });
+                
+                console.log('✅ Updated for today!');
+              } catch (err) {
+                console.error('❌ Error in run function:', err);
+                process.exit(1);
+              }
             }
             run();
           "
