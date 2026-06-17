@@ -24,7 +24,7 @@ jobs:
       - name: Run Update Script
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          RAPIDAPI_KEY: 'यहाँ_अपनी_RAPID_API_KEY_डालें'
+          RAPIDAPI_KEY: '74fc4b54a4msh8061068cefa2fe6p125daajsn4e3a57929e4d'
         run: |
           node -e "
             const admin = require('firebase-admin');
