@@ -1,0 +1,79 @@
+name: Daily Real Panchang Update
+
+on:
+  schedule:
+    - cron: '40 22 * * *' 
+  workflow_dispatch:
+
+jobs:
+  update-real-panchang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 🌟 ट्रांसलेटर पैकेज इंस्टॉल कर रहे हैं
+      - name: Install dependencies
+        run: npm install firebase-admin axios google-translate-api-x
+
+      - name: Run Panchang Script
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }} 
+        run: |
+          node -e "
+            const { initializeApp, cert } = require('firebase-admin/app');
+            const { getFirestore } = require('firebase-admin/firestore');
+            const axios = require('axios');
+            const translate = require('google-translate-api-x'); // 🌟 ट्रांसलेटर जोड़ दिया
+            
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            
+            initializeApp({
+              credential: cert(serviceAccount)
+            });
+            
+            const db = getFirestore();
+            
+            async function run() {
+              try {
+                const todayId = new Date().toISOString().split('T')[0];
+                
+                const lat = 30.9010;
+                const lon = 75.8573;
+                
+                console.log('पंचांग फेच करना शुरू कर रहे हैं...');
+                
+                const url = 'https://YOUR_PANCHANG_API_URL_HERE?lat=' + lat + '&lon=' + lon + '&date=' + todayId;
+                
+                const response = await axios.get(url, {
+                  headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
+                });
+                
+                const englishData = response.data;
+                
+                // 🚨 ध्यान दें: हम पूरा डेटा ट्रांसलेट नहीं करेंगे (ताकि टाइम ख़राब न हो)। 
+                // जो शब्द (जैसे तिथि या नक्षत्र) इंग्लिश में आएंगे, सिर्फ उन्हें ट्रांसलेट करेंगे।
+                // उदाहरण:
+                /*
+                if(englishData.tithi_name) {
+                   const tithiHindi = await translate(englishData.tithi_name, { to: 'hi' });
+                   englishData.tithi_name_hindi = tithiHindi.text;
+                }
+                */
+                
+                await db.collection('daily_panchang').doc(todayId).set(englishData, { merge: true });
+                
+                console.log('✅ पंचांग सफलतापूर्वक daily_panchang कलेक्शन में सेव हो गया!');
+              } catch (err) {
+                console.error('❌ Error:', err.message);
+                process.exit(1);
+              }
+            }
+            run();
+          "
