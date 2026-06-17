@@ -43,38 +43,42 @@ jobs:
               try {
                 const todayId = new Date().toISOString().split('T')[0];
                 const zodiacSigns = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
-                let allData = {};
+                
+                // 🌟 दोनों के लिए अलग-अलग लिस्ट (Objects) बना ली हैं
+                let dailyData = {};
+                let weeklyData = {};
                 
                 console.log('Daily और Weekly राशिफल फेच करना शुरू कर रहे हैं...');
                 
                 for (let sign of zodiacSigns) {
                   console.log('Fetching for: ' + sign);
                   
-                  // 🌟 1. Daily (आज का) URL
                   const dailyUrl = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/?zodiacSign=' + sign;
-                  
-                  // 🌟 2. Weekly (इस हफ़्ते का) URL
                   const weeklyUrl = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/weekly/?zodiacSign=' + sign;
-                  
                   const headers = { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY };
                   
-                  // दोनों का डेटा मँगवा रहे हैं
+                  // Daily मँगवाएं
                   const dailyResponse = await axios.get(dailyUrl, { headers });
-                  await new Promise(r => setTimeout(r, 500)); // बीच में हल्का सा ब्रेक
+                  await new Promise(r => setTimeout(r, 500)); 
                   
+                  // Weekly मँगवाएं
                   const weeklyResponse = await axios.get(weeklyUrl, { headers });
                   await new Promise(r => setTimeout(r, 500)); 
                   
-                  // 🌟 दोनों को एक ही जगह (Firebase के लिए) जोड़ रहे हैं
-                  allData[sign] = {
-                    daily: dailyResponse.data,
-                    weekly: weeklyResponse.data
-                  };
+                  // 🌟 दोनों को उनकी अपनी-अपनी लिस्ट में डाल रहे हैं
+                  dailyData[sign] = dailyResponse.data;
+                  weeklyData[sign] = weeklyResponse.data;
                 }
                 
-                // डेटाबेस में सेव करें
-                await db.collection('daily_rashifal').doc(todayId).set(allData, { merge: true });
-                console.log('✅ Daily और Weekly राशिफल Firebase में सेव हो गया!');
+                // 🌟 1. Daily डेटा को 'daily_rashifal' कलेक्शन में सेव करें
+                await db.collection('daily_rashifal').doc(todayId).set(dailyData, { merge: true });
+                console.log('✅ Daily राशिफल सेव हो गया!');
+                
+                // 🌟 2. Weekly डेटा को 'weekly_rashifal' कलेक्शन में सेव करें
+                await db.collection('weekly_rashifal').doc(todayId).set(weeklyData, { merge: true });
+                console.log('✅ Weekly राशिफल सेव हो गया!');
+                
+                console.log('🎉 दोनों राशिफल अलग-अलग कलेक्शन में सफलतापूर्वक सेव हो गए!');
               } catch (err) {
                 console.error('❌ Error:', err.message);
                 process.exit(1);
