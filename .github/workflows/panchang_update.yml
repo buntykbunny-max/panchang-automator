@@ -33,49 +33,36 @@ jobs:
             
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
             
-            if (!admin.apps.length) {
-              admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount)
-              });
-            }
+            // 🌟 सीधा Initialize करें (GitHub Actions में 'length' चेक की कोई ज़रूरत नहीं है)
+            admin.initializeApp({
+              credential: admin.credential.cert(serviceAccount)
+            });
             
             const db = admin.firestore();
             
             async function run() {
               try {
                 const todayId = new Date().toISOString().split('T')[0];
-                
-                // 🌟 यहाँ हमने सभी 12 राशियों की लिस्ट बना दी है
                 const zodiacSigns = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
-                
                 let allData = {};
                 
                 console.log('राशिफल फेच करना शुरू कर रहे हैं...');
                 
-                // 🌟 लूप: यह एक-एक करके सभी 12 राशियों का डेटा लाएगा
                 for (let sign of zodiacSigns) {
                   console.log('Fetching for: ' + sign);
-                  
-                  // URL के आख़िर में ' + sign ' लगाने से राशि अपने आप बदल जाएगी
                   const url = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/today/?zodiacSign=' + sign;
                   
                   const response = await axios.get(url, {
                     headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
                   });
-                  
-                  // डेटा को इकट्ठा कर रहे हैं
                   allData[sign] = response.data;
-                  
-                  // API पर एक साथ लोड न पड़े, इसलिए हर राशि के बीच आधा सेकंड का ब्रेक
-                  await new Promise(r => setTimeout(r, 500));
+                  await new Promise(r => setTimeout(r, 500)); // API को रिलैक्स करने का टाइम
                 }
                 
-                // 🌟 सारा डेटा एक ही बार में Firebase में सेव कर दें
                 await db.collection('daily_rashifal').doc(todayId).set(allData, { merge: true });
-                
                 console.log('✅ सभी 12 राशियों का राशिफल Firebase में सेव हो गया!');
               } catch (err) {
-                console.error('❌ Error in run function:', err.message);
+                console.error('❌ Error:', err.message);
                 process.exit(1);
               }
             }
