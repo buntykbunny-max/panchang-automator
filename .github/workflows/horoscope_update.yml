@@ -51,7 +51,7 @@ jobs:
                 for (let sign of zodiacSigns) {
                   console.log('Fetching & Translating for: ' + sign);
                   
-                  const url = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/today/?zodiacSign=' + sign;
+                  const url = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/weekly/?zodiacSign=' + sign;
                   
                   const response = await axios.get(url, {
                     headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
