@@ -26,7 +26,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }} 
         run: |
-         node -e "
+           node -e "
             const { initializeApp, cert } = require('firebase-admin/app');
             const { getFirestore } = require('firebase-admin/firestore');
             const axios = require('axios');
@@ -44,43 +44,44 @@ jobs:
                 const todayId = new Date().toISOString().split('T')[0];
                 const zodiacSigns = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
                 
-                // 🌟 दोनों के लिए अलग-अलग लिस्ट (Objects) बना ली हैं
                 let dailyData = {};
                 let weeklyData = {};
                 
-                console.log('Daily और Weekly राशिफल फेच करना शुरू कर रहे हैं...');
+                console.log('Daily और Weekly फेचिंग शुरू...');
                 
                 for (let sign of zodiacSigns) {
-                  console.log('Fetching for: ' + sign);
+                  console.log('Fetching: ' + sign);
                   
                   const dailyUrl = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/?zodiacSign=' + sign;
                   const weeklyUrl = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/weekly/?zodiacSign=' + sign;
                   const headers = { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY };
                   
-                  // Daily मँगवाएं
+                  // Daily
                   const dailyResponse = await axios.get(dailyUrl, { headers });
-                  await new Promise(r => setTimeout(r, 500)); 
-                  
-                  // Weekly मँगवाएं
-                  const weeklyResponse = await axios.get(weeklyUrl, { headers });
-                  await new Promise(r => setTimeout(r, 500)); 
-                  
-                  // 🌟 दोनों को उनकी अपनी-अपनी लिस्ट में डाल रहे हैं
                   dailyData[sign] = dailyResponse.data;
+                  await new Promise(r => setTimeout(r, 1000)); // 1 सेकंड का ब्रेक
+                  
+                  // Weekly
+                  const weeklyResponse = await axios.get(weeklyUrl, { headers });
                   weeklyData[sign] = weeklyResponse.data;
+                  await new Promise(r => setTimeout(r, 1000)); // 1 सेकंड का ब्रेक
                 }
                 
-                // 🌟 1. Daily डेटा को 'daily_rashifal' कलेक्शन में सेव करें
+                console.log('✅ सारा डेटा आ गया! अब Firebase में सेव कर रहे हैं...');
+                
+                // Daily Save
                 await db.collection('daily_rashifal').doc(todayId).set(dailyData, { merge: true });
-                console.log('✅ Daily राशिफल सेव हो गया!');
+                console.log('✅ Daily सेव हो गया!');
                 
-                // 🌟 2. Weekly डेटा को 'weekly_rashifal' कलेक्शन में सेव करें
+                // Weekly Save
                 await db.collection('weekly_rashifal').doc(todayId).set(weeklyData, { merge: true });
-                console.log('✅ Weekly राशिफल सेव हो गया!');
+                console.log('✅ Weekly सेव हो गया!');
                 
-                console.log('🎉 दोनों राशिफल अलग-अलग कलेक्शन में सफलतापूर्वक सेव हो गए!');
               } catch (err) {
-                console.error('❌ Error:', err.message);
+                console.error('❌ Error आ गया:', err.message);
+                if (err.response) {
+                  console.error('API Error Details:', err.response.data);
+                }
                 process.exit(1);
               }
             }
