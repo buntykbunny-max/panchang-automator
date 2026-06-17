@@ -1,13 +1,12 @@
-name: Daily Panchang Auto-Update
+name: Daily Horoscope Auto-Update
 
 on:
   schedule:
-    # 🌟 रोज़ सुबह 4:00 बजे (IST के हिसाब से) चलेगा
     - cron: '30 22 * * *' 
   workflow_dispatch:
 
 jobs:
-  update-panchang:
+  update-horoscope:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -18,24 +17,23 @@ jobs:
         with:
           node-version: '22'
 
+      # 🌟 यहाँ हमने 'google-translate-api-x' को भी इनस्टॉल किया है
       - name: Install dependencies
-        run: npm install firebase-admin axios
+        run: npm install firebase-admin axios google-translate-api-x
 
       - name: Run Update Script
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          # 🚨 API Key को सीक्रेट्स से ले रहे हैं
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }} 
         run: |
           node -e "
             const { initializeApp, cert } = require('firebase-admin/app');
             const { getFirestore } = require('firebase-admin/firestore');
             const axios = require('axios');
+            const translate = require('google-translate-api-x'); // 🌟 ट्रांसलेशन टूल
             
-            // 🌟 सीक्रेट की को पढ़ें
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
             
-            // 🌟 नए और सही तरीके से Initialize करें
             initializeApp({
               credential: cert(serviceAccount)
             });
@@ -48,24 +46,37 @@ jobs:
                 const zodiacSigns = ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'];
                 let allData = {};
                 
-                console.log('राशिफल फेच करना शुरू कर रहे हैं...');
+                console.log('राशिफल फेच और ट्रांसलेट करना शुरू कर रहे हैं...');
                 
                 for (let sign of zodiacSigns) {
-                  console.log('Fetching for: ' + sign);
+                  console.log('Fetching & Translating for: ' + sign);
                   
-                  // URL 
-                  const url = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/monthly/?zodiacSign=' + sign;
+                  const url = 'https://best-daily-astrology-and-horoscope-api.p.rapidapi.com/api/Detailed-Horoscope/today/?zodiacSign=' + sign;
                   
                   const response = await axios.get(url, {
                     headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
                   });
                   
-                  allData[sign] = response.data;
-                  await new Promise(r => setTimeout(r, 500)); // API को रिलैक्स करने का टाइम
+                  // 🌟 API से मिला इंग्लिश डेटा
+                  const englishData = response.data;
+                  
+                  // 🚨 ध्यान दें: यहाँ 'prediction' या 'description' वो शब्द होना चाहिए जिसमें असली राशिफल लिखा है। 
+                  // मान लेते हैं कि API में वो 'prediction' के नाम से आता है:
+                  let textToTranslate = englishData.prediction || JSON.stringify(englishData); 
+                  
+                  // 🌟 हिंदी में ट्रांसलेट करें
+                  const translatedResult = await translate(textToTranslate, { to: 'hi' });
+                  
+                  // ट्रांसलेटेड डेटा को लिस्ट में जोड़ें
+                  allData[sign] = Object.assign({}, englishData, {
+                    hindi_prediction: translatedResult.text
+                  });
+                  
+                  await new Promise(r => setTimeout(r, 1000)); // ट्रांसलेशन API को रिलैक्स करने का टाइम
                 }
                 
                 await db.collection('daily_rashifal').doc(todayId).set(allData, { merge: true });
-                console.log('✅ सभी 12 राशियों का राशिफल Firebase में सफलतापूर्वक सेव हो गया!');
+                console.log('✅ सभी 12 राशियों का राशिफल हिंदी में ट्रांसलेट होकर Firebase में सेव हो गया!');
               } catch (err) {
                 console.error('❌ Error:', err.message);
                 process.exit(1);
