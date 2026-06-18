@@ -20,17 +20,20 @@ async function fetchAndSaveHoroscope() {
     try {
       console.log(`\n--- Fetching data for: ${sign} ---`);
 
-      const dailyRes = await fetch(`https://freehoroscopeapi.com/api/v1/get-horoscope/daily?sign=${sign}`);
+     const dailyRes = await fetch(`https://freehoroscopeapi.com/api/v1/get-horoscope/daily?sign=${sign}`);
       const dailyData = await dailyRes.json();
       
       const weeklyRes = await fetch(`https://freehoroscopeapi.com/api/v1/get-horoscope/weekly?sign=${sign}`);
       const weeklyData = await weeklyRes.json();
 
-      // 🌟 बदलाव 2: API का असली रिस्पॉन्स GitHub लॉग्स में देखने के लिए प्रिंट करें
-      console.log(`Raw Daily Response:`, JSON.stringify(dailyData));
+      // 🌟 लॉग्स चेक करें कि वीकली डेटा का स्ट्रक्चर क्या है
+      console.log(`Raw Weekly Response:`, JSON.stringify(weeklyData));
 
       const dailyEnglishText = dailyData?.data?.horoscope || dailyData?.horoscope;
-      const weeklyEnglishText = weeklyData?.data?.horoscope || weeklyData?.horoscope;
+      
+      // 🌟 यहाँ पर हो सकता है API वीकली के लिए अलग की (Key) दे रही हो
+      // अगर API वीकली का रिस्पॉन्स 'data' के अंदर नहीं दे रही, तो यह लाइन उसे पकड़ेगी:
+      const weeklyEnglishText = weeklyData?.data?.horoscope || weeklyData?.horoscope || weeklyData?.weekly_horoscope || weeklyData?.prediction;
 
       // अगर API ने डेटा नहीं दिया, तो Firebase में कचरा सेव करने के बजाय उसे स्किप (Skip) कर दें
       if (!dailyEnglishText) {
