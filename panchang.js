@@ -1,8 +1,6 @@
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const Astronomy = require('astronomy-engine');   // ← sahi tarika
-
-// 🔥 Init() line bilkul hata do
+const Astronomy = require('astronomy-engine');
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 initializeApp({ credential: cert(serviceAccount) });
@@ -12,8 +10,10 @@ const db = getFirestore();
 async function updatePanchang() {
   try {
     const date = new Date();
-    const time = new Astronomy.Time(date);   // ← yeh sahi hai
-
+    
+    // ✅ Sahi tarika
+    const time = Astronomy.MakeTime(date);
+ 
     const sunEcliptic = Astronomy.Ecliptic(Astronomy.Body.Sun, time);
     const moonEcliptic = Astronomy.Ecliptic(Astronomy.Body.Moon, time);
 
