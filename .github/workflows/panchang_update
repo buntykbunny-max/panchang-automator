@@ -1,79 +1,68 @@
-name: Daily Real Panchang Update
+name: Daily Panchang Updater
 
 on:
   schedule:
-    - cron: '40 22 * * *' 
+    - cron: '30 18 * * *' # रोज़ रात 12:00 बजे (IST) चलेगा
   workflow_dispatch:
 
 jobs:
-  update-real-panchang:
+  update-panchang:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: '18'
 
-      # 🌟 ट्रांसलेटर पैकेज इंस्टॉल कर रहे हैं
-      - name: Install dependencies
-        run: npm install firebase-admin axios google-translate-api-x
-
-      - name: Run Panchang Script
+      - name: Run Panchang Engine
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }} 
         run: |
+          npm install firebase-admin astronomy-engine
+          
           node -e "
             const { initializeApp, cert } = require('firebase-admin/app');
             const { getFirestore } = require('firebase-admin/firestore');
-            const axios = require('axios');
-            const translate = require('google-translate-api-x'); // 🌟 ट्रांसलेटर जोड़ दिया
+            const Astronomy = require('astronomy-engine');
             
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-            
-            initializeApp({
-              credential: cert(serviceAccount)
-            });
-            
+            initializeApp({ credential: cert(serviceAccount) });
             const db = getFirestore();
             
-            async function run() {
+            async function savePanchang() {
               try {
-                const todayId = new Date().toISOString().split('T')[0];
+                const date = new Date();
+                const todayId = date.toISOString().split('T')[0];
                 
-                const lat = 30.9010;
-                const lon = 75.8573;
+                // स्टैंडर्ड लोकेशन: नई दिल्ली
+                const lat = 28.6139;
+                const lng = 77.2090;
                 
-                console.log('पंचांग फेच करना शुरू कर रहे हैं...');
+                // ग्रहों की पोज़ीशन
+                const sunEcliptic = Astronomy.Ecliptic(Astronomy.Body.Sun, date);
+                const moonEcliptic = Astronomy.Ecliptic(Astronomy.Body.Moon, date);
                 
-                const url = 'https://YOUR_PANCHANG_API_URL_HERE?lat=' + lat + '&lon=' + lon + '&date=' + todayId;
+                // सिंपल गणित (उदाहरण के लिए)
+                const tithiDiff = (moonEcliptic.elon - sunEcliptic.elon + 360) % 360;
+                const tithiNumber = Math.ceil(tithiDiff / 12);
                 
-                const response = await axios.get(url, {
-                  headers: { 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY }
-                });
+                const panchangData = {
+                  date: todayId,
+                  tithi_number: tithiNumber,
+                  standard_location: 'New Delhi',
+                  // आप इसमें नक्षत्र और योग का गणित जोड़ सकते हैं
+                };
                 
-                const englishData = response.data;
+                await db.collection('daily_panchang').doc(todayId).set(panchangData, { merge: true });
+                console.log('✅ यूनिवर्सल पंचांग Firebase में सेव हो गया!');
                 
-                // 🚨 ध्यान दें: हम पूरा डेटा ट्रांसलेट नहीं करेंगे (ताकि टाइम ख़राब न हो)। 
-                // जो शब्द (जैसे तिथि या नक्षत्र) इंग्लिश में आएंगे, सिर्फ उन्हें ट्रांसलेट करेंगे।
-                // उदाहरण:
-                /*
-                if(englishData.tithi_name) {
-                   const tithiHindi = await translate(englishData.tithi_name, { to: 'hi' });
-                   englishData.tithi_name_hindi = tithiHindi.text;
-                }
-                */
-                
-                await db.collection('daily_panchang').doc(todayId).set(englishData, { merge: true });
-                
-                console.log('✅ पंचांग सफलतापूर्वक daily_panchang कलेक्शन में सेव हो गया!');
-              } catch (err) {
-                console.error('❌ Error:', err.message);
+              } catch (error) {
+                console.error('❌ Error:', error);
                 process.exit(1);
               }
             }
-            run();
+            savePanchang();
           "
