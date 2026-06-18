@@ -20,10 +20,10 @@ async function fetchAndSaveHoroscope() {
     try {
       console.log(`\n--- Fetching data for: ${sign} ---`);
 
-      const dailyRes = await fetch(`https://freehoroscopeapi.com/api/daily?sign=${sign}`);
+      const dailyRes = await fetch(`https://freehoroscopeapi.com/api/v1/get-horoscope/daily?sign=${sign}`);
       const dailyData = await dailyRes.json();
       
-      const weeklyRes = await fetch(`https://freehoroscopeapi.com/api/weekly?sign=${sign}`);
+      const weeklyRes = await fetch(`https://freehoroscopeapi.com/api/v1/get-horoscope/weekly?sign=${sign}`);
       const weeklyData = await weeklyRes.json();
 
       // 🌟 बदलाव 2: API का असली रिस्पॉन्स GitHub लॉग्स में देखने के लिए प्रिंट करें
