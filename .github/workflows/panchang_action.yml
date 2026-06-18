@@ -19,7 +19,7 @@ jobs:
           node-version: '18'
 
       - name: Install Dependencies
-        run: npm install firebase-admin astronomy-engine
+        run: npm install firebase-admin suncalc
 
       - name: Run Panchang Script
         env:
