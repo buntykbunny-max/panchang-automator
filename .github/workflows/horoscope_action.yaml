@@ -2,7 +2,7 @@ name: Daily Horoscope Updater
 
 on:
   schedule:
-    - cron: '*/10 * * * *'   # Test: har 10 minute mein
+    - cron: '30 22 * * *'   # Test: har 10 minute mein
   workflow_dispatch:
 
 jobs:
