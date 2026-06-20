@@ -3,7 +3,7 @@ name: Daily Panchang Updater
 on:
   schedule:
     # 15 22 * * * का मतलब है भारत का सुबह 4:15 बजे
-    - cron: '15 22 * * *'
+   - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
