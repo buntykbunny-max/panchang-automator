@@ -2,7 +2,7 @@ name: Daily Horoscope Updater
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # Har 5 minute mein (test ke liye)
+    - cron: '*/10 * * * *'   # Test: har 10 minute mein (*/5 se thoda safe)
   workflow_dispatch:
 
 jobs:
@@ -10,16 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
-      # 🌟 यहाँ दोनों पैकेजेस एक साथ इंस्टॉल होने चाहिए 🌟
       - name: Install Dependencies
-        run: npm install firebase-admin google-translate-api-x
+        run: npm ci   # Better than npm install
 
       - name: Run Horoscope Script
         env:
